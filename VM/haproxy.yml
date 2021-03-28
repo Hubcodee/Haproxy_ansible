@@ -1,0 +1,63 @@
+- hosts : webserver
+  become: true 
+  tasks :
+
+  - name : "Installing httpd packages"
+    package :
+      name : "httpd"
+      state : present
+
+  - name : "Installing PHP in webserver"
+    package : 
+      name : "php"
+      state : present
+
+  - name : "Copying web pages to server"
+    copy : 
+      src : "index.php"
+      dest : "/var/www/html"
+    register : status
+
+  - name : "Starting the httpd service"
+    service : 
+      name : "httpd"
+      state : started 
+      enabled : yes
+
+  - name : "Status check httpd server"
+    service : 
+      name : httpd
+      state : restarted
+    when : status.changed == true 
+
+  - name : "Enabling firewall for port no 80"
+    firewalld:
+      port : "80/tcp"
+      state : enabled
+      permanent : yes 
+      immediate : yes      
+
+- hosts : localhost
+  become: true
+  tasks :
+  
+  - name : "Installing haproxy.. "         
+    package :
+      name : "haproxy"
+      state : present
+
+  - name : "Configuring the HAPROXY"
+    template : 
+      src : haproxy.cfg.j2
+      dest : "/etc/haproxy/haproxy.cfg"
+    register : status_cfg
+
+  - name : "Starting haproxy server"
+    service : 
+      name : "haproxy"
+      state : started
+        
+  - service :
+          name : "haproxy"
+          state : restarted
+    when : status_cfg.changed == true    
